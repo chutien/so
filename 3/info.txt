@@ -1,0 +1,6 @@
+Pliki źródłowe minixa edytowane lub stworzone (względem /usr/src/minix):
+*     include/minix/callnr.h
+*     /usr/include/minix/callnr.h
+*     servers/pm/pstree.c (nowy)
+*     servers/pm/proto.h
+*     servers/pm/table.c

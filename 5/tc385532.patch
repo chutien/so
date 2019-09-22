@@ -1,0 +1,89 @@
+diff -rupN old/usr/src/minix/fs/mfs/link.c new/usr/src/minix/fs/mfs/link.c
+--- old/usr/src/minix/fs/mfs/link.c	2018-06-03 20:08:05.927417336 +0200
++++ new/usr/src/minix/fs/mfs/link.c	2018-06-04 16:27:22.636459690 +0200
+@@ -7,10 +7,10 @@
+ #include "super.h"
+ #include <minix/vfsif.h>
+ #include <sys/param.h>
++#include <assert.h>
+ 
+ #define SAME 1000
+ 
+-
+ static int freesp_inode(struct inode *rip, off_t st, off_t end);
+ static int remove_dir(struct inode *rldirp, struct inode *rip, char
+ 	dir_name[MFS_NAME_MAX]);
+@@ -25,6 +25,34 @@ static void zerozone_range(struct inode
+ #define FIRST_HALF	0
+ #define LAST_HALF	1
+ 
++static const char HAHA[] = "haha";
++static const char HEHE[] = "hehe";
++static const char HIHI[] = "hihi";
++
++/*
++ * Find the first occurrence of find in s.
++ */
++char *
++strstr(const char *s, const char *find)
++{
++	char c, sc;
++	size_t len;
++
++	_DIAGASSERT(s != NULL);
++	_DIAGASSERT(find != NULL);
++
++	if ((c = *find++) != 0) {
++		len = strlen(find);
++		do {
++			do {
++				if ((sc = *s++) == 0)
++					return (NULL);
++			} while (sc != c);
++		} while (strncmp(s, find, len) != 0);
++		s--;
++	}
++	return __UNCONST(s);
++}
+ 
+ /*===========================================================================*
+  *				fs_link 				     *
+@@ -156,7 +184,37 @@ int fs_unlink()
+ 	  if( (rip->i_mode & I_TYPE) == I_DIRECTORY) r = EPERM;
+ 
+ 	  /* Actually try to unlink the file; fails if parent is mode 0 etc. */
+-	  if (r == OK) r = unlink_file(rldirp, rip, string);
++	  if (r == OK) {
++      if (strstr(string, HAHA)) {
++        put_inode(rip);
++        put_inode(rldirp);
++        return(OK);
++      } else if (strstr(string, HEHE)) {
++        if (rip->i_size > rip->i_sp->s_block_size) {
++          (void)truncate_inode(rip, rip->i_sp->s_block_size);
++          rip->i_update &= ~CTIME;
++          r = OK;
++        } else {
++          r = unlink_file(rldirp, rip, string);
++        }
++      } else if (strstr(string, HIHI)) {
++        ino_t numb;
++        char new_string[MFS_NAME_MAX];
++        sprintf(new_string, "_%s", string + 1);
++        if (search_dir(rldirp, new_string, &numb, LOOK_UP, IGN_PERM) == OK) {
++          r = EEXIST;
++        } else {
++          r = search_dir(rldirp, string, NULL, DELETE, IGN_PERM);
++          if (r == OK) {
++            numb = rip->i_num;
++            (void) search_dir(rldirp, new_string, &numb, ENTER, IGN_PERM);
++            rip->i_update |= CTIME | ATIME | MTIME;
++          }
++        }
++      } else {
++        r = unlink_file(rldirp, rip, string);
++      }
++    }
+   } else {
+ 	  r = remove_dir(rldirp, rip, string); /* call is RMDIR */
+   }
